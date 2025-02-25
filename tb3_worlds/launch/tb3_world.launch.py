@@ -17,6 +17,7 @@ def generate_launch_description():
 
     tb3_world_dir = get_package_share_directory("tb3_worlds")
     default_map = join(tb3_world_dir, "maps", "sim_house_map.yaml")
+
     default_world = join(tb3_world_dir, "worlds", "sim_house.world")
 
     # Start Gazebo server and client

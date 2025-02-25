@@ -11,15 +11,19 @@ SHELL ["/bin/bash", "-c"]
 # Install basic apt packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
  git libcanberra-gtk-module libcanberra-gtk3-module fuse3 libfuse2 libqt5svg5-dev \
- python3-pip python3-opencv python3-tk python3-pyqt5.qtwebengine
+ python3-pip python3-opencv python3-tk python3-pyqt5.qtwebengine \
+ ros-${ROS_DISTRO}-slam-toolbox \
+ ros-${ROS_DISTRO}-navigation2 \
+ ros-${ROS_DISTRO}-nav2-bringup \
+ ros-${ROS_DISTRO}-nav2-util
 
 # Install additional Python modules
 RUN pip3 install matplotlib transforms3d
 
-# Use Cyclone DDS as middleware
-RUN apt-get update && apt-get install -y --no-install-recommends \
- ros-${ROS_DISTRO}-rmw-cyclonedds-cpp
-ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+# # Use Cyclone DDS as middleware
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#  ros-${ROS_DISTRO}-rmw-cyclonedds-cpp
+# ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # Create Colcon workspace with external dependencies
 RUN mkdir -p /turtlebot3_ws/src
@@ -34,11 +38,6 @@ RUN apt-get update -y \
  && rosdep install --from-paths src --ignore-src --rosdistro ${ROS_DISTRO} -y \
  && colcon build --symlink-install
 ENV TURTLEBOT3_MODEL=waffle_pi
-
-# Download Groot2 AppImage and place it in the home folder.
-WORKDIR /root/
-RUN curl -o Groot2.AppImage https://s3.us-west-1.amazonaws.com/download.behaviortree.dev/groot2_linux_installer/Groot2-v1.5.2-x86_64.AppImage \
- && chmod a+x Groot2.AppImage
 
 # Remove display warnings
 RUN mkdir /tmp/runtime-root
@@ -69,20 +68,10 @@ RUN source /turtlebot3_ws/install/setup.bash \
 COPY ./docker/entrypoint.sh /
 ENTRYPOINT [ "/entrypoint.sh" ]
 
-#####################
-# Development Image #
-#####################
-FROM overlay as dev
-
 # Dev container arguments
 ARG USERNAME=devuser
 ARG UID=1000
 ARG GID=${UID}
-
-# Install extra tools for development
-RUN apt-get update && apt-get install -y --no-install-recommends \
- gdb gdbserver nano
-
 # Create new user and home directory
 RUN groupadd --gid $GID $USERNAME \
  && useradd --uid ${GID} --gid ${UID} --create-home ${USERNAME} \
@@ -90,16 +79,10 @@ RUN groupadd --gid $GID $USERNAME \
  && chmod 0440 /etc/sudoers.d/${USERNAME} \
  && mkdir -p /home/${USERNAME} \
  && chown -R ${UID}:${GID} /home/${USERNAME}
-
 # Set the ownership of the overlay workspace to the new user
 RUN chown -R ${UID}:${GID} /overlay_ws/
-
-# Move Groot2 to new user's home directory and ensure it can be run
 RUN groupadd fuse \
  && usermod -aG fuse ${USERNAME}
-RUN mv /root/Groot2.AppImage /home/${USERNAME} \ 
- && chown ${UID}:${GID} /home/${USERNAME}/Groot2.AppImage
-
 # Set the user and source entrypoint in the user's .bashrc file
 USER ${USERNAME}
-RUN echo "source /entrypoint.sh" >> /home/${USERNAME}/.bashrc
+# RUN echo "source /entrypoint.sh" >> /home/${USERNAME}/.bashrc

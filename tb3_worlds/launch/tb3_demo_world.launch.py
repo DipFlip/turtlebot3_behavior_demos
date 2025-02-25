@@ -8,9 +8,9 @@ from os.path import join
 
 
 def generate_launch_description():
-    tb3_nav2_dir = get_package_share_directory("turtlebot3_navigation2")
     tb3_world_dir = get_package_share_directory("tb3_worlds")
-
+    tb3_nav2_dir = get_package_share_directory("turtlebot3_navigation2")
+    
     # Spawn the world and robot
     spawn_world = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -21,27 +21,32 @@ def generate_launch_description():
             "y_pose": LaunchConfiguration("y_pose", default=0.0),
         }.items(),
     )
+    
     # For some reason, there is an error with starting both spawn world and nav
     # in this launch file without this delay ???
     spawn_world_delayed = TimerAction(period=3.0, actions=[spawn_world])
 
-    # Start navigation stack
-    default_map = join(tb3_world_dir, "maps", "sim_house_map.yaml")
-    nav_stack = IncludeLaunchDescription(
+    # Start Nav2 with SLAM configuration
+    nav2_slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             join(tb3_nav2_dir, "launch", "navigation2.launch.py")
         ),
         launch_arguments={
             "use_sim_time": LaunchConfiguration("use_sim_time", default="true"),
-            "map": LaunchConfiguration("map", default=default_map),
+            "slam": "True",
+            "map": "",
+            "params_file": join("/params", "nav2_slam_params.yaml"),
+            "use_composition": "False",
+            "autostart": "True"
         }.items(),
     )
 
-    # Set AMCL initial pose
-    amcl_init_pose = Node(
-        package="tb3_worlds",
-        executable="set_init_amcl_pose.py",
-        name="init_pose_publisher",
+    # Replace the initial_pose_node with this new implementation
+    initial_pose_pub = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='initial_pose_pub',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
     )
 
     # Spawn blocks
@@ -55,5 +60,22 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [spawn_world_delayed, nav_stack, amcl_init_pose, spawn_blocks]
+        [
+            spawn_world_delayed,
+            # Delay Nav2 start to ensure Gazebo and robot are ready
+            TimerAction(
+                period=5.0,
+                actions=[nav2_slam]
+            ),
+            # Delay initial pose until Nav2 is ready
+            TimerAction(
+                period=10.0,
+                actions=[initial_pose_pub]
+            ),
+            # Delay block spawning until everything else is ready
+            TimerAction(
+                period=12.0,
+                actions=[spawn_blocks]
+            )
+        ]
     )

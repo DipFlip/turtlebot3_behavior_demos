@@ -10,8 +10,6 @@
 #
 # To open an interactive shell to a running container:
 #   docker exec -it <container_name> bash
-
-version: "3.9"
 services:
   # Base image containing dependencies.
   base:
@@ -41,6 +39,7 @@ services:
       # Allows graphical programs in the container.
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority
+      - ./tb3_worlds/params:/params
 
   # Overlay image containing the example source code.
   overlay:
@@ -51,7 +50,7 @@ services:
       dockerfile: docker/Dockerfile
       target: overlay
 
-  # Demo world
+  # Demo world with SLAM
   demo-world:
     extends: overlay
     command: ros2 launch tb3_worlds tb3_demo_world.launch.py

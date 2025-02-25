@@ -10,7 +10,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_tb3_worlds = get_package_share_directory("tb3_worlds")
     default_world_dir = join(pkg_tb3_worlds, "maps", "sim_house_locations.yaml")
-
+    
     return LaunchDescription(
         [
             # Arguments
@@ -47,6 +47,7 @@ def generate_launch_description():
                         "target_color": LaunchConfiguration("target_color"),
                         "tree_type": LaunchConfiguration("tree_type"),
                         "enable_vision": LaunchConfiguration("enable_vision"),
+                        "use_slam": True,  # Always use SLAM
                     }
                 ],
             ),
