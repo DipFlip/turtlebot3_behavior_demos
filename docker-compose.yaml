@@ -40,6 +40,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-$HOME/.Xauthority}:/root/.Xauthority
       - ./tb3_worlds/params:/params
+      - ./tb3_worlds/launch:/overlay_ws/install/tb3_worlds/share/tb3_worlds/launch
 
   # Overlay image containing the example source code.
   overlay:
